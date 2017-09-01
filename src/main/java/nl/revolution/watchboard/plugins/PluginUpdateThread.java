@@ -23,11 +23,11 @@ public class PluginUpdateThread extends Thread {
     public PluginUpdateThread(String browserInstance, List<WatchboardPlugin> plugins) {
         this.browserInstance = browserInstance;
         this.plugins = plugins;
-        this.pluginNames = StringUtils.join(plugins.stream().map(WatchboardPlugin::getName).collect(Collectors.toList()));
+        this.pluginNames = plugins.stream().map(WatchboardPlugin::getName).collect(Collectors.joining(","));
     }
 
     public void run() {
-        LOG.info("Starting data worker for browser instance '" + browserInstance + "' with plugins " + pluginNames + ".");
+        LOG.info("Starting data worker for browser instance '{}' with plugins {}.", browserInstance, pluginNames);
         currentSessionStartTimestamp = System.currentTimeMillis();
 
         wrappedDriver = WebDriverWrapper.phantomJs();
@@ -36,21 +36,21 @@ public class PluginUpdateThread extends Thread {
         plugins.forEach(plugin -> plugin.setDriver(wrappedDriver));
         plugins.forEach(WatchboardPlugin::performLogin);
 
-        LOG.info("Starting main update loop for plugins " + pluginNames);
+        LOG.info("Starting main update loop for plugins {}", pluginNames);
 
         while (!stop) {
             plugins.forEach(plugin -> {
                 if (!performSinglePluginUpdate(plugin)) {
-                    LOG.error("Update run for plugin '" + plugin.getName() + "' failed, restarting browserInstance '" + browserInstance + "' for plugins " + pluginNames + ": ");
+                    LOG.error("Update run for plugin '{}' failed, restarting browserInstance '{}' for plugins: {} ", plugin.getName(), browserInstance, pluginNames);
                     restartWebDriverAndReLogin();
                 }
             });
 
             // Re-start webdriver and re-login every now and than to prevent session max duration issues.
             long currentSessionTimeInMinutes = ((System.currentTimeMillis() - currentSessionStartTimestamp) / 1000 / 60);
-            LOG.info("currentSessionTimeInMinutes: " + currentSessionTimeInMinutes);
+            LOG.info("currentSessionTimeInMinutes: {}", currentSessionTimeInMinutes);
             if (currentSessionTimeInMinutes > Config.getInstance().getInt(Config.MAX_SESSION_DURATION_MINUTES)) {
-                LOG.info("Max session duration exceeded, restarting browser instance '" + browserInstance + "'.");
+                LOG.info("Max session duration exceeded, restarting browser instance '{}'.", browserInstance);
 
                 // Restart; this also resets the session duration timer.
                 restartWebDriverAndReLogin();
@@ -61,7 +61,7 @@ public class PluginUpdateThread extends Thread {
     private boolean performSinglePluginUpdate(WatchboardPlugin plugin) {
         long start = System.currentTimeMillis();
         String pluginName = plugin.getName();
-        LOG.info("Performing update for plugin " + pluginName);
+        LOG.info("Performing update for plugin {}", pluginName);
 
         // Perform update.
         try {
@@ -72,7 +72,7 @@ public class PluginUpdateThread extends Thread {
         }
 
         long end = System.currentTimeMillis();
-        LOG.info("Done performing update for plugin " + pluginName + ". Update took " + ((end - start) / 1000) + " seconds.");
+        LOG.info("Done performing update for plugin {}. Update took {} seconds.", pluginName, ((end - start) / 1000));
 
         // Wait before fetching next update.
 //        int backendUpdateIntervalSeconds = plugin.getUpdateInterval();
