@@ -2,6 +2,9 @@ package nl.revolution.watchboard.utils;
 
 import nl.revolution.watchboard.WebDriverHttpParamsSetter;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.slf4j.Logger;
@@ -16,17 +19,14 @@ public class WebDriverWrapper {
 
     private WebDriver driver;
 
+    private WebDriverWrapper(WebDriver driver) {
+        this.driver = driver;
+    }
+
     public void start() {
         LOG.info("Initializing PhantomJS webDriver.");
         try {
             WebDriverHttpParamsSetter.setSoTimeout(SOCKET_TIMEOUT_MS);
-            DesiredCapabilities desiredCapabilities = new DesiredCapabilities();
-            String[] args = new String[]{"--proxy-type=none", "--web-security=false"};
-            desiredCapabilities.setCapability("phantomjs.cli.args", args);
-            desiredCapabilities.setCapability("phantomjs.ghostdriver.cli.args", args);
-            desiredCapabilities.setCapability("phantomjs.page.settings.loadImages", false);
-            driver = new PhantomJSDriver(desiredCapabilities);
-            // driver = new FirefoxDriver();
             WebDriverUtils.enableTimeouts(driver);
         } catch (Exception e) {
             LOG.error("Error (re)initializing webDriver: ", e);
@@ -54,6 +54,37 @@ public class WebDriverWrapper {
         shutdown();
         start();
     }
+
+    public static WebDriverWrapper phantomJs() {
+        DesiredCapabilities desiredCapabilities = DesiredCapabilities.phantomjs();
+        String[] args = new String[]{"--proxy-type=none", "--web-security=false", "--webdriver-logfile=/tmp/phantomjsdriver.log"};
+        desiredCapabilities.setCapability("phantomjs.cli.args", args);
+        desiredCapabilities.setCapability("phantomjs.ghostdriver.cli.args", args);
+        desiredCapabilities.setCapability("phantomjs.page.settings.loadImages", false);
+        return new WebDriverWrapper(new PhantomJSDriver(desiredCapabilities));
+    }
+
+    public static WebDriverWrapper chrome(boolean headless, boolean canary) {
+        ChromeOptions chromeOptions = new ChromeOptions();
+
+        if (canary) {
+            chromeOptions.setBinary("/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary");
+        }
+
+        if (headless) {
+            chromeOptions.addArguments("headless");
+        }
+
+        ChromeDriver driver = new ChromeDriver(chromeOptions);
+        return new WebDriverWrapper(driver);
+    }
+
+
+    public static WebDriverWrapper firefox() {
+        return new WebDriverWrapper(new FirefoxDriver());
+    }
+
+
 
     public WebDriver getDriver() {
         return driver;

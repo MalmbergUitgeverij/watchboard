@@ -30,7 +30,7 @@ public class PluginUpdateThread extends Thread {
         LOG.info("Starting data worker for browser instance '" + browserInstance + "' with plugins " + pluginNames + ".");
         currentSessionStartTimestamp = System.currentTimeMillis();
 
-        wrappedDriver = new WebDriverWrapper();
+        wrappedDriver = WebDriverWrapper.phantomJs();
         wrappedDriver.start();
 
         plugins.forEach(plugin -> plugin.setDriver(wrappedDriver));
