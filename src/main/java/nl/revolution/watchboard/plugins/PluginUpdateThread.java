@@ -2,7 +2,6 @@ package nl.revolution.watchboard.plugins;
 
 import nl.revolution.watchboard.Config;
 import nl.revolution.watchboard.utils.WebDriverWrapper;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +30,8 @@ public class PluginUpdateThread extends Thread {
         currentSessionStartTimestamp = System.currentTimeMillis();
 
         wrappedDriver = WebDriverWrapper.phantomJs();
+//        wrappedDriver = WebDriverWrapper.chrome(true, "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary");
+//        wrappedDriver = WebDriverWrapper.firefox(true, "/Applications/Firefox 2.app/Contents/MacOS/firefox-bin");
         wrappedDriver.start();
 
         plugins.forEach(plugin -> plugin.setDriver(wrappedDriver));

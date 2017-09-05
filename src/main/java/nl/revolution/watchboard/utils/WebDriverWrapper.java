@@ -5,6 +5,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.slf4j.Logger;
@@ -64,11 +65,11 @@ public class WebDriverWrapper {
         return new WebDriverWrapper(new PhantomJSDriver(desiredCapabilities));
     }
 
-    public static WebDriverWrapper chrome(boolean headless, boolean canary) {
+    public static WebDriverWrapper chrome(boolean headless, String binary) {
         ChromeOptions chromeOptions = new ChromeOptions();
 
-        if (canary) {
-            chromeOptions.setBinary("/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary");
+        if (binary != null) {
+            chromeOptions.setBinary(binary);
         }
 
         if (headless) {
@@ -80,8 +81,18 @@ public class WebDriverWrapper {
     }
 
 
-    public static WebDriverWrapper firefox() {
-        return new WebDriverWrapper(new FirefoxDriver());
+    public static WebDriverWrapper firefox(boolean headless, String binary) {
+        FirefoxOptions firefoxOptions = new FirefoxOptions();
+
+        if (binary != null) {
+            firefoxOptions.setBinary(binary);
+        }
+
+        if (headless) {
+            firefoxOptions.addArguments("-headless");
+        }
+
+        return new WebDriverWrapper(new FirefoxDriver(firefoxOptions));
     }
 
 
