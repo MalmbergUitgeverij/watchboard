@@ -2,7 +2,6 @@ package nl.revolution.watchboard.plugins;
 
 import nl.revolution.watchboard.Config;
 import nl.revolution.watchboard.utils.WebDriverWrapper;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,14 +22,14 @@ public class PluginUpdateThread extends Thread {
     public PluginUpdateThread(String browserInstance, List<WatchboardPlugin> plugins) {
         this.browserInstance = browserInstance;
         this.plugins = plugins;
-        this.pluginNames = StringUtils.join(plugins.stream().map(WatchboardPlugin::getName).collect(Collectors.toList()));
+        this.pluginNames = plugins.stream().map(WatchboardPlugin::getName).collect(Collectors.joining(","));
     }
 
     public void run() {
-        LOG.info("Starting data worker for browser instance '" + browserInstance + "' with plugins " + pluginNames + ".");
+        LOG.info("Starting data worker for browser instance '{}' with plugins {}.", browserInstance, pluginNames);
         currentSessionStartTimestamp = System.currentTimeMillis();
 
-        wrappedDriver = new WebDriverWrapper();
+        wrappedDriver = WebDriverWrapper.phantomJs();
         wrappedDriver.start();
 
         plugins.forEach(plugin -> plugin.setDriver(wrappedDriver));
