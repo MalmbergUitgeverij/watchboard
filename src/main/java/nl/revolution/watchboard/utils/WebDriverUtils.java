@@ -1,10 +1,10 @@
 package nl.revolution.watchboard.utils;
 
 import nl.revolution.watchboard.Config;
+import nl.revolution.watchboard.data.Graph;
 import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +13,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static nl.revolution.watchboard.utils.WebDriverWaitBuilder.let;
 
 public class WebDriverUtils {
 
@@ -29,6 +32,16 @@ public class WebDriverUtils {
         driver.manage().timeouts().pageLoadTimeout(WEBDRIVER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         driver.manage().timeouts().setScriptTimeout(WEBDRIVER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         driver.manage().timeouts().implicitlyWait(WEBDRIVER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    }
+
+    public static void takeDebugScreenshot(WebDriver driver, Graph graph) {
+        try {
+            String debugFile = graph.getImagePath() + "-debug.png";
+            WebDriverUtils.takeScreenShot(driver, driver.findElement(By.tagName("html")), debugFile);
+            LOG.info("Took debug screenshot: {}", debugFile);
+        } catch (IOException e) {
+            LOG.error("Error while taking debug screenshot for " + graph.getId() + ": ", e);
+        }
     }
 
     public static void takeScreenShot(WebDriver driver, WebElement element, String fileName) throws IOException {
@@ -76,8 +89,9 @@ public class WebDriverUtils {
     }
 
     public static void verifyTitle(WebDriver driver, String expectedTitle, long timeoutInSeconds) {
-        new WebDriverWait(driver, timeoutInSeconds).until(ExpectedConditions.titleContains(expectedTitle));
-        if (!driver.getTitle().contains(expectedTitle)) {
+        try {
+            let(driver).wait(timeoutInSeconds, SECONDS).on(ExpectedConditions.titleContains(expectedTitle));
+        } catch (TimeoutException e) {
             LOG.error("Expected title '{}' is not contained in actual title '{}'.", expectedTitle, driver.getTitle());
         }
     }

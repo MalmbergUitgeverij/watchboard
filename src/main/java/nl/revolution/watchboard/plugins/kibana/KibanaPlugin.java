@@ -7,13 +7,18 @@ import nl.revolution.watchboard.plugins.WatchboardPlugin;
 import nl.revolution.watchboard.utils.WebDriverUtils;
 import nl.revolution.watchboard.utils.WebDriverWrapper;
 import org.openqa.selenium.*;
+import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 
-import static nl.revolution.watchboard.utils.WebDriverUtils.doSleep;
+import static java.time.temporal.ChronoUnit.SECONDS;
+import static nl.revolution.watchboard.utils.WebDriverWaitBuilder.let;
+import static org.openqa.selenium.support.ui.ExpectedConditions.not;
+import static org.openqa.selenium.support.ui.ExpectedConditions.presenceOfAllElementsLocatedBy;
+import static org.openqa.selenium.support.ui.ExpectedConditions.visibilityOfAllElementsLocatedBy;
 
 public class KibanaPlugin implements WatchboardPlugin {
 
@@ -75,54 +80,38 @@ public class KibanaPlugin implements WatchboardPlugin {
         driver.manage().window().setSize(new Dimension(2000, 1000));
         WebDriverUtils.fetchDummyPage(driver);
 
-        driver.get(graph.getUrl());
+        try {
+            WebDriverUtils.disableTimeouts(driver);
 
-        for (int i=0; i<30; i++) {
-            String currentUrl = driver.getCurrentUrl();
-            if (currentUrl.equals(graph.getUrl())) {
-                // URL loaded.
-                break;
-            }
-            doSleep(500);
-        }
-
-        // Wait until dashboard panels are rendered.
-        int size = 0;
-        for (int i=0; i<60; i++) {
-            size = WebDriverUtils.numberOfElements(driver, By.tagName("visualize"));
-            if (size > 0) {
-                break;
-            }
-            doSleep(500);
-        }
-
-        // If no items were found, skip screenshot.
-        if (size == 0) {
-            LOG.info("No Kibana visualizations found; skipping screenshot.");
             try {
-                WebDriverUtils.takeScreenShot(driver, driver.findElement(By.tagName("html")), graph.getImagePath()+"-debug.png");
-            } catch (IOException e) {
-                LOG.error("Error while taking debug screenshot for " + graph.getId() + ": ", e);
+                driver.get(graph.getUrl());
+            } catch (TimeoutException ignored) {
+                // Expected, do nothing.
             }
-            return;
+
+            let(driver).wait(15, SECONDS).on(currentUrlIs(graph.getUrl()));
+            let(driver).wait(30, SECONDS).on(visibilityOfAllElementsLocatedBy(By.tagName("visualize")));
+            let(driver).wait(10, SECONDS).on(visibilityOfAllElementsLocatedBy(By.className("visualize-chart")));
+            let(driver).wait(30, SECONDS).on(not(presenceOfAllElementsLocatedBy(By.className("loading"))));
+            let(driver).wait(5, SECONDS).on(nonTransparant(By.className("visualize-chart")));
+
+            getKibanaScreenshot(graph.getBrowserWidth(), graph.getBrowserHeight(), graph.getImagePath());
+            plugin.setTsLastUpdated(LocalDateTime.now());
+
+        } catch (NoSuchElementException | TimeoutException e) {
+            LOG.info("No Kibana visualizations found for graph {}; skipping screenshot. ({})", graph.getId(), e.getMessage());
+            WebDriverUtils.takeDebugScreenshot(driver, graph);
+        } finally {
+            WebDriverUtils.enableTimeouts(driver);
         }
+    }
 
-        // Wait until a visualization chart is present.
-        for (int i=0; i<20; i++) {
-            size = WebDriverUtils.numberOfElements(driver, By.className("visualize-chart"));
-            // LOG.info("visualize-chart size: " + size);
-            if (size > 0) {
-                break;
-            }
-            doSleep(500);
-        }
+    private ExpectedCondition<Boolean> nonTransparant(By locator) {
+        return webDriver -> webDriver.findElements(locator).stream().allMatch(element -> element.getCssValue("opacity").equals(String.valueOf(1)));
+    }
 
-        // Wait two more seconds to allow for rendering to complete ...
-        doSleep(2000);
-
-        getKibanaScreenshot(graph.getBrowserWidth(), graph.getBrowserHeight(), graph.getImagePath());
-
-        plugin.setTsLastUpdated(LocalDateTime.now());
+    private ExpectedCondition<Boolean> currentUrlIs(String url) {
+        return webDriver -> webDriver.getCurrentUrl().equals(url);
     }
 
 
